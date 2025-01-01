@@ -1,0 +1,10 @@
+pillow==10.4.0
+pandas
+pycocotools==2.0.7
+opencv
+requests
+numpy==1.24.3
+pytorch==1.11.0
+torchvision==0.12.0
+scikit-image==0.20.0
+# 该软件包要求不全
