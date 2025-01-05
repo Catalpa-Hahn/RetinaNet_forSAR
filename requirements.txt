@@ -7,3 +7,4 @@ numpy==1.24.3
 pytorch==1.11.0
 torchvision==0.12.0
 scikit-image==0.20.0
+tqdm

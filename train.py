@@ -15,6 +15,9 @@ from torch.utils.data import DataLoader
 from retinanet import coco_eval
 from retinanet import csv_eval
 
+import csv
+from tqdm import tqdm
+
 assert torch.__version__.split('.')[0] == '1', 'PyTorch版本错误，需要为1.x.x'
 
 print('CUDA available: {}'.format(torch.cuda.is_available()))
@@ -120,7 +123,13 @@ def main(args=None):
     retinanet.module.freeze_bn()
 
     print('Num training images: {}'.format(len(dataset_train)))
-
+    # 在loss.csv文件中写入表头
+    # TODO: 将每轮（Epoch）或每次迭代（Iteration）的loss写入文件，最好能直接输出曲线图（考虑使用tensorboard）。
+    #  需要考虑的问题：在每次写入的时候打开文件（可能会产生额外的时间消耗），还是在训练开始时打开一次（需要大幅调整缩进），
+    #  还是说with语句会自动判断何时关闭文件，根本不用考虑这个问题？
+    # with open("./runs/train/loss.csv", 'a') as loss_file:
+    #     loss_writer = csv.writer(loss_file)
+    #     loss_writer.writerow(['Epoch', 'Iteration', 'cla_loss', 'reg_loss', 'running_loss'])
     for epoch_num in range(parser.epochs):
 
         retinanet.train()
@@ -128,6 +137,7 @@ def main(args=None):
 
         epoch_loss = []
 
+        # TODO: 将反复的输出修改为进度条（使用tqdm）
         for iter_num, data in enumerate(dataloader_train):
             try:
                 optimizer.zero_grad()
@@ -165,6 +175,7 @@ def main(args=None):
                 print(e)
                 continue
 
+        # TODO: 此处似乎没有针对SARDet-100K数据集的评估过程，需添加。
         if parser.dataset == 'coco':
 
             print('Evaluating dataset')
@@ -179,11 +190,11 @@ def main(args=None):
 
         scheduler.step(np.mean(epoch_loss))
 
-        torch.save(retinanet.module, '{}_retinanet_{}.pt'.format(parser.dataset, epoch_num))
-
+        torch.save(retinanet.module, './runs/modules/{}_retinanet_{}.pt'.format(parser.dataset, epoch_num))
+        # TODO: [待验证的修改]修改了此处附近的两处.pt文件存储路径，之前只有文件名，如果报错，请思考如何修改，将其存入特定的文件夹，而不是散在源代码根目录下。
     retinanet.eval()
-
-    torch.save(retinanet, 'model_final.pt')
+    # TODO: 似乎没有判断最优模型的过程？
+    torch.save(retinanet, './runs/modules/model_final.pt')
 
 
 if __name__ == '__main__':
