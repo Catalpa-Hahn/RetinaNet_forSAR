@@ -1,5 +1,6 @@
 # RetinaNet_forSAR版本管理记录
 
+---
 ## 2025-01-01更新
 已能在SARDet_100K数据集上开展训练，效果未知。  
 由于原程序根据json文件读取图片，因此无法使用削减的训练集训练模型。
@@ -14,9 +15,15 @@
 3、缺少判断最优模型的过程，需添加。  
 上述问题已写入TODO。
 
+## 2025-01-09更新
+在coco_validation.py的基础上修改，在SARDet-100K数据集上实现模型验证[SARDet_validation.py](./SARDet_validation.py)。
+
+考虑接下来继续修改此代码，还是利用MMDetection重新实现。
+
 ## 其他说明
 修改、调试过程详细记录，以及一些详细说明见：  
-(1) [第9周工作记录](doc/week9ResearchRecord.MD)
+(1) [第9周工作记录](doc/week9ResearchRecord.MD)   
+(2) [第10周工作记录](./doc/week10ResearchRecord.MD)
 
 ## 参考资料
 (1) 论文和代码详解：https://zhuanlan.zhihu.com/p/143877125  
