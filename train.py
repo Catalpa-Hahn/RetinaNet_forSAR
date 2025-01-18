@@ -5,6 +5,7 @@ import numpy as np
 
 import torch
 import torch.optim as optim
+from sympy.physics.units import length
 from torchvision import transforms
 
 from retinanet import model
@@ -28,7 +29,7 @@ def main(args=None):
     parser = argparse.ArgumentParser(description='Simple training script for training a RetinaNet network.')
 
     parser.add_argument('--dataset', default='SARDet', help='Dataset type, must be one of csv or coco or SARDet.')
-    parser.add_argument('--coco_path', default='../SARDet-100K', help='Path to COCO directory')
+    parser.add_argument('--coco_path', default='../Datasets/SARDet-100K', help='Path to COCO directory')
     parser.add_argument('--csv_train', help='Path to file containing training annotations (see readme)')
     parser.add_argument('--csv_classes', help='Path to file containing class list (see readme)')
     parser.add_argument('--csv_val', help='Path to file containing validation annotations (optional, see readme)')
@@ -133,13 +134,14 @@ def main(args=None):
 
         # 建立modules文件夹存储训练结果
         os.makedirs('./runs/train/modules', exist_ok=True)   #创建目录
-        for epoch_num in range(parser.epochs):
-
+        for epoch_num in tqdm(range(parser.epochs)):
             retinanet.train()
             retinanet.module.freeze_bn()
 
             epoch_loss = []
 
+            # 打开进度条
+            iter_now = tqdm(total=len(dataloader_train))
             for iter_num, data in enumerate(dataloader_train):
                 try:
                     optimizer.zero_grad()
@@ -167,15 +169,18 @@ def main(args=None):
 
                     epoch_loss.append(float(loss))
 
-                    print(
-                        'Epoch: {} | Iteration: {} | Classification loss: {:1.5f} | Regression loss: {:1.5f} | Running loss: {:1.5f}'.format(
-                            epoch_num, iter_num, float(classification_loss), float(regression_loss), np.mean(loss_hist)))
+                    # print(
+                    #     'Epoch: {} | Iteration: {} | Classification loss: {:1.5f} | Regression loss: {:1.5f} | Running loss: {:1.5f}'.format(
+                    #         epoch_num, iter_num, float(classification_loss), float(regression_loss), np.mean(loss_hist)))
                     loss_writer.writerow([epoch_num, iter_num, float(classification_loss), float(regression_loss), np.mean(loss_hist)])
                     del classification_loss
                     del regression_loss
+                    iter_now.update(1)  # 进度条更新
                 except Exception as e:
                     print(e)
                     continue
+
+            iter_now.close()    #关闭进度条
 
             if parser.dataset == 'coco' or parser.dataset == 'SARDet':
 
