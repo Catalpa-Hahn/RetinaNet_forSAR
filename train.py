@@ -36,6 +36,10 @@ def main(args=None):
 
     parser.add_argument('--depth', help='Resnet depth, must be one of 18, 34, 50, 101, 152', type=int, default=50)
     parser.add_argument('--epochs', help='Number of epochs', type=int, default=100)
+    parser.add_argument('--train_dir', help='训练结果文件夹存放目录', type=str, default='./runs/train/')
+    parser.add_argument('--batch_size', help='批处理大小', type=int, default=2)
+    parser.add_argument('--work_num', help='进程数', type=int, default=3)
+    parser.add_argument('--lr', help='学习率', type=float, default=1e-5)
 
     parser = parser.parse_args(args)
 
@@ -48,16 +52,6 @@ def main(args=None):
         dataset_train = CocoDataset(parser.coco_path, set_name='train_3000',
                                     transform=transforms.Compose([Normalizer(), Augmenter(), Resizer()]))
         dataset_val = CocoDataset(parser.coco_path, set_name='val',
-                                  transform=transforms.Compose([Normalizer(), Resizer()]))
-
-    elif parser.dataset == 'coco':
-
-        if parser.coco_path is None:
-            raise ValueError('Must provide --coco_path when training on COCO,')
-
-        dataset_train = CocoDataset(parser.coco_path, set_name='train2017',
-                                    transform=transforms.Compose([Normalizer(), Augmenter(), Resizer()]))
-        dataset_val = CocoDataset(parser.coco_path, set_name='val2017',
                                   transform=transforms.Compose([Normalizer(), Resizer()]))
 
     elif parser.dataset == 'csv':
@@ -81,12 +75,12 @@ def main(args=None):
     else:
         raise ValueError('Dataset type not understood (must be csv or coco), exiting.')
 
-    sampler = AspectRatioBasedSampler(dataset_train, batch_size=2, drop_last=False)
-    dataloader_train = DataLoader(dataset_train, num_workers=3, collate_fn=collater, batch_sampler=sampler)
+    sampler = AspectRatioBasedSampler(dataset_train, batch_size=parser.batch_size, drop_last=False)
+    dataloader_train = DataLoader(dataset_train, num_workers=parser.work_num, collate_fn=collater, batch_sampler=sampler)
 
     if dataset_val is not None:
         sampler_val = AspectRatioBasedSampler(dataset_val, batch_size=1, drop_last=False)
-        dataloader_val = DataLoader(dataset_val, num_workers=3, collate_fn=collater, batch_sampler=sampler_val)
+        dataloader_val = DataLoader(dataset_val, num_workers=parser.work_num, collate_fn=collater, batch_sampler=sampler_val)
 
     # Create the model
     if parser.depth == 18:
@@ -115,7 +109,7 @@ def main(args=None):
 
     retinanet.training = True
 
-    optimizer = optim.Adam(retinanet.parameters(), lr=1e-5)
+    optimizer = optim.Adam(retinanet.parameters(), lr=parser.lr)
 
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, patience=3, verbose=True)
 
@@ -126,22 +120,23 @@ def main(args=None):
 
     print('Num training images: {}'.format(len(dataset_train)))
     # 在loss.csv文件中写入表头
-    # TODO: 将每轮（Epoch）或每次迭代（Iteration）的loss写入文件，最好能直接输出曲线图（考虑使用tensorboard）。
-    os.makedirs('./runs/train/', exist_ok=True)
-    with open("./runs/train/loss.csv", 'w', newline='') as loss_file:
+    # TODO: 最好能直接输出loss曲线图（考虑使用tensorboard）。
+    os.makedirs(parser.train_dir, exist_ok=True)
+    with open(os.path.join(parser.train_dir, 'loss.csv'), 'w', newline='') as loss_file:
         loss_writer = csv.writer(loss_file)
         loss_writer.writerow(['Epoch', 'Iteration', 'cla_loss', 'reg_loss', 'running_loss'])
 
         # 建立modules文件夹存储训练结果
-        os.makedirs('./runs/train/modules', exist_ok=True)   #创建目录
-        for epoch_num in tqdm(range(parser.epochs)):
+        os.makedirs(os.path.join(parser.train_dir, 'modules/'), exist_ok=True)   #创建目录
+        for epoch_num in range(parser.epochs):
             retinanet.train()
             retinanet.module.freeze_bn()
 
             epoch_loss = []
 
             # 打开进度条
-            iter_now = tqdm(total=len(dataloader_train))
+            iter_now = tqdm(total=len(dataloader_train), position=0, leave=True)
+            iter_now.set_description("Epoch: {}/{}".format(epoch_num + 1, parser.epochs))
             for iter_num, data in enumerate(dataloader_train):
                 try:
                     optimizer.zero_grad()
@@ -175,11 +170,11 @@ def main(args=None):
                     loss_writer.writerow([epoch_num, iter_num, float(classification_loss), float(regression_loss), np.mean(loss_hist)])
                     del classification_loss
                     del regression_loss
+                    iter_now.set_postfix(loss="{:.6f}".format(np.mean(loss_hist)))
                     iter_now.update(1)  # 进度条更新
                 except Exception as e:
                     print(e)
                     continue
-
             iter_now.close()    #关闭进度条
 
             if parser.dataset == 'coco' or parser.dataset == 'SARDet':
@@ -196,11 +191,11 @@ def main(args=None):
 
             scheduler.step(np.mean(epoch_loss))
 
-            torch.save(retinanet.module, './runs/train/modules/{}_retinanet_{}.pt'.format(parser.dataset, epoch_num))
+            torch.save(retinanet.module, os.path.join(parser.train_dir, 'modules/{}_retinanet_{}.pt'.format(parser.dataset, epoch_num)))
 
     retinanet.eval()
     # TODO: 似乎没有判断最优模型的过程，直接存了最后一轮的权重参数？
-    torch.save(retinanet, './runs/train/modules/model_final.pt')
+    torch.save(retinanet, os.path.join(parser.train_dir, 'modules/model_final.pt'))
 
 
 if __name__ == '__main__':
