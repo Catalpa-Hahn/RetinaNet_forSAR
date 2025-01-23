@@ -181,7 +181,7 @@ def main(args=None):
 
                 print('Evaluating dataset')
 
-                coco_eval.evaluate_coco(dataset_val, retinanet)
+                coco_eval.evaluate_coco(dataset_val, retinanet, parser.train_dir)
 
             elif parser.dataset == 'csv' and parser.csv_val is not None:
 

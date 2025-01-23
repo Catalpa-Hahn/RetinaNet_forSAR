@@ -1,9 +1,10 @@
 from pycocotools.cocoeval import COCOeval
 import json
 import torch
+import os
 
 
-def evaluate_coco(dataset, model, threshold=0.05):
+def evaluate_coco(dataset, model, json_root, threshold=0.05):
     
     model.eval()
     
@@ -66,11 +67,11 @@ def evaluate_coco(dataset, model, threshold=0.05):
             return
 
         # write output
-        json.dump(results, open('./runs/train/{}_bbox_results.json'.format(dataset.set_name), 'w'), indent=4)
+        json.dump(results, open(os.path.join(json_root, '{}_bbox_results.json'.format(dataset.set_name)), 'w'), indent=4)
 
         # load results in COCO evaluation tool
         coco_true = dataset.coco
-        coco_pred = coco_true.loadRes('./runs/train/{}_bbox_results.json'.format(dataset.set_name))
+        coco_pred = coco_true.loadRes(os.path.join(json_root, '{}_bbox_results.json'.format(dataset.set_name)))
 
         # run COCO evaluation
         coco_eval = COCOeval(coco_true, coco_pred, 'bbox')
