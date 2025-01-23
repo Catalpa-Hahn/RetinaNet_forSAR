@@ -124,7 +124,8 @@ def main(args=None):
     os.makedirs(parser.train_dir, exist_ok=True)
     with open(os.path.join(parser.train_dir, 'loss.csv'), 'w', newline='') as loss_file:
         loss_writer = csv.writer(loss_file)
-        loss_writer.writerow(['Epoch', 'Iteration', 'cla_loss', 'reg_loss', 'running_loss'])
+        # loss_writer.writerow(['Epoch', 'Iteration', 'cla_loss', 'reg_loss', 'running_loss'])
+        loss_writer.writerow(['Epoch', 'cla_loss', 'reg_loss', 'loss_hist', 'epoch_loss'])
 
         # 建立modules文件夹存储训练结果
         os.makedirs(os.path.join(parser.train_dir, 'modules/'), exist_ok=True)   #创建目录
@@ -167,15 +168,18 @@ def main(args=None):
                     # print(
                     #     'Epoch: {} | Iteration: {} | Classification loss: {:1.5f} | Regression loss: {:1.5f} | Running loss: {:1.5f}'.format(
                     #         epoch_num, iter_num, float(classification_loss), float(regression_loss), np.mean(loss_hist)))
-                    loss_writer.writerow([epoch_num, iter_num, float(classification_loss), float(regression_loss), np.mean(loss_hist)])
-                    del classification_loss
-                    del regression_loss
+
+                    # del classification_loss
+                    # del regression_loss
                     iter_now.set_postfix(loss="{:.6f}".format(np.mean(loss_hist)))
                     iter_now.update(1)  # 进度条更新
                 except Exception as e:
                     print(e)
                     continue
             iter_now.close()    #关闭进度条
+            loss_writer.writerow(
+                [epoch_num, float(classification_loss), float(regression_loss), np.mean(loss_hist), np.mean(epoch_loss)])
+
 
             if parser.dataset == 'coco' or parser.dataset == 'SARDet':
 
