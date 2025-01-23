@@ -82,4 +82,4 @@ def evaluate_coco(dataset, model, json_root, threshold=0.05):
 
         model.train()
 
-        return
+        return coco_eval.stats

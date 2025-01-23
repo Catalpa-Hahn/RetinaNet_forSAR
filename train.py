@@ -36,7 +36,7 @@ def main(args=None):
 
     parser.add_argument('--depth', help='Resnet depth, must be one of 18, 34, 50, 101, 152', type=int, default=50)
     parser.add_argument('--epochs', help='Number of epochs', type=int, default=100)
-    parser.add_argument('--train_dir', help='训练结果文件夹存放目录', type=str, default='./runs/train/')
+    # parser.add_argument('--train_dir', help='训练结果文件夹存放目录', type=str, default='./runs/train/')
     parser.add_argument('--batch_size', help='批处理大小', type=int, default=2)
     parser.add_argument('--work_num', help='进程数', type=int, default=3)
     parser.add_argument('--lr', help='学习率', type=float, default=1e-5)
@@ -49,7 +49,7 @@ def main(args=None):
         if parser.coco_path is None:
             raise ValueError('Must provide --coco_path when training on SARDet-100K,')
 
-        dataset_train = CocoDataset(parser.coco_path, set_name='train_3000',
+        dataset_train = CocoDataset(parser.coco_path, set_name='train',
                                     transform=transforms.Compose([Normalizer(), Augmenter(), Resizer()]))
         dataset_val = CocoDataset(parser.coco_path, set_name='val',
                                   transform=transforms.Compose([Normalizer(), Resizer()]))
@@ -121,14 +121,24 @@ def main(args=None):
     print('Num training images: {}'.format(len(dataset_train)))
     # 在loss.csv文件中写入表头
     # TODO: 最好能直接输出loss曲线图（考虑使用tensorboard）。
-    os.makedirs(parser.train_dir, exist_ok=True)
-    with open(os.path.join(parser.train_dir, 'loss.csv'), 'w', newline='') as loss_file:
+    # 建立不重名文件夹
+    train_dir = './runs/train_R{}'.format(parser.depth)
+    file_num = 0
+    while os.path.exists(train_dir + '_{}'.format(file_num)):
+        file_num += 1
+    train_dir = train_dir + '_{}'.format(file_num)
+    os.makedirs(train_dir, exist_ok=True)
+    # 结果文件路径
+    csv_path = os.path.join(train_dir, 'RetinaNet_R{}_result.csv'.format(parser.depth))
+    with open(csv_path, 'w', newline='') as loss_file:
         loss_writer = csv.writer(loss_file)
         # loss_writer.writerow(['Epoch', 'Iteration', 'cla_loss', 'reg_loss', 'running_loss'])
-        loss_writer.writerow(['Epoch', 'cla_loss', 'reg_loss', 'loss_hist', 'epoch_loss'])
+        loss_writer.writerow(['Epoch', 'cls_loss', 'reg_loss', 'loss_hist', 'epoch_loss',
+                              'AP_50-95', 'AP_50', 'AP_75', 'mAP_s', 'mAP_m', 'mAP_l',
+                              'AR_1', 'AR_10', 'AR_100', 'AR_s', 'AR_m', 'AR_l'])
 
         # 建立modules文件夹存储训练结果
-        os.makedirs(os.path.join(parser.train_dir, 'modules/'), exist_ok=True)   #创建目录
+        os.makedirs(os.path.join(train_dir, 'modules/'), exist_ok=True)   #创建目录
         for epoch_num in range(parser.epochs):
             retinanet.train()
             retinanet.module.freeze_bn()
@@ -176,16 +186,19 @@ def main(args=None):
                 except Exception as e:
                     print(e)
                     continue
-            iter_now.close()    #关闭进度条
-            loss_writer.writerow(
-                [epoch_num, float(classification_loss), float(regression_loss), np.mean(loss_hist), np.mean(epoch_loss)])
+            # iter_now.close()    #关闭进度条
 
 
             if parser.dataset == 'coco' or parser.dataset == 'SARDet':
 
                 print('Evaluating dataset')
 
-                coco_eval.evaluate_coco(dataset_val, retinanet, parser.train_dir)
+                result = coco_eval.evaluate_coco(dataset_val, retinanet, train_dir)
+                if result is not None:
+                    data_list = [epoch_num, float(classification_loss), float(regression_loss), np.mean(loss_hist),
+                         np.mean(epoch_loss)]
+                    data_list.extend(result)
+                    loss_writer.writerow(data_list)
 
             elif parser.dataset == 'csv' and parser.csv_val is not None:
 
@@ -195,11 +208,11 @@ def main(args=None):
 
             scheduler.step(np.mean(epoch_loss))
 
-            torch.save(retinanet.module, os.path.join(parser.train_dir, 'modules/{}_retinanet_{}.pt'.format(parser.dataset, epoch_num)))
+            torch.save(retinanet.module, os.path.join(train_dir, 'modules/{}_retinanet_{}.pt'.format(parser.dataset, epoch_num)))
 
     retinanet.eval()
     # TODO: 似乎没有判断最优模型的过程，直接存了最后一轮的权重参数？
-    torch.save(retinanet, os.path.join(parser.train_dir, 'modules/model_final.pt'))
+    torch.save(retinanet, os.path.join(train_dir, 'modules/model_final.pt'))
 
 
 if __name__ == '__main__':
