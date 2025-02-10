@@ -2,6 +2,7 @@ from pycocotools.cocoeval import COCOeval
 import json
 import torch
 import os
+from tqdm import tqdm
 
 
 def evaluate_coco(dataset, model, json_root, threshold=0.05):
@@ -14,7 +15,7 @@ def evaluate_coco(dataset, model, json_root, threshold=0.05):
         results = []
         image_ids = []
 
-        for index in range(len(dataset)):
+        for index in tqdm(range(len(dataset)), position=0, leave=True, desc="Evaluating: "):
             data = dataset[index]
             scale = data['scale']
 
@@ -61,7 +62,7 @@ def evaluate_coco(dataset, model, json_root, threshold=0.05):
             image_ids.append(dataset.image_ids[index])
 
             # print progress
-            print('{}/{}'.format(index, len(dataset)), end='\r')
+            # print('{}/{}'.format(index, len(dataset)), end='\r')
 
         if not len(results):
             return
