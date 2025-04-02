@@ -1,30 +1,30 @@
-# RetinaNet_forSAR版本管理记录
+# RetinaNet算法在SAR目标检测数据集上的实验
 
----
-## 2025-01-01更新
-已能在SARDet_100K数据集上开展训练，效果未知。  
-由于原程序根据json文件读取图片，因此无法使用削减的训练集训练模型。
+--- 
 
-## 2025-01-03更新
-已能在削减的SARDet-100K数据集上开展训练，效果待验证。
+## 训练
+在文件[train.py](train.py)中配置训练参数并运行。
 
-## 2025-01-05更新
-发现一些存在的问题，主要为：  
-1、loss的存储和直观表现（曲线图）；  
-2、缺少针对SARDet-100K数据集的模型评估过程，需添加；  
-3、缺少判断最优模型的过程，需添加。  
-上述问题已写入TODO。
+## 评估
+将要评估的模型存储于文件夹[weights](./weights)中后，
+在文件[val_batch.py](val_batch.py)中的main函数开头，
+设置要评估的模型的文件名和骨干网深度（一一对应），
+然后运行，即可自动评估多个模型。
 
-## 2025-01-09更新
-在coco_validation.py的基础上修改，在SARDet-100K数据集上实现模型验证[SARDet_validation.py](./SARDet_validation.py)。
+## 获取模型参数量、运算量等的总结
+在文件[modelSummary.py](modelSummary.py)中的主程序入口处配置模型路径和输入图像大小，
+运行后即可在终端获得模型结构简报、参数量、MACs、GFLOPs、FPS等信息。  
+**说明**：
+1. 所有计算均在`test_model()`函数中进行，如对结果有疑问，请检查该函数。
+2. FLOPs由式`FLOPs = MACs / 2`计算得到。
+3. FPS和每张图像的推理时长由100张图像依次输入模型后平均得到，计算方法为
+    ```
+        total_time = end_time - start_time  # 总耗时
+        fps = num_images / total_time       # FPS
+        inf_time = total_time / num_images  # 每张图像的推理时长
+    ```
+4. 模型结构的总结，可以在`test_model()`函数中调取`summary()`函数处配置，相关参数含义可参阅[此处](https://blog.csdn.net/qq_40206371/article/details/120558250)。
 
-考虑接下来继续修改此代码，还是利用MMDetection重新实现。
 
-## 其他说明
-修改、调试过程详细记录，以及一些详细说明见：  
-(1) [第9周工作记录](doc/week9ResearchRecord.MD)   
-(2) [第10周工作记录](./doc/week10ResearchRecord.MD)
 
-## 参考资料
-(1) 论文和代码详解：https://zhuanlan.zhihu.com/p/143877125  
-(2) 原工程地址：https://link.zhihu.com/?target=https%3A//github.com/yhenon/pytorch-retinanet
+
