@@ -20,7 +20,7 @@ import os
 import csv
 from tqdm import tqdm
 
-assert torch.__version__.split('.')[0] == '1', 'PyTorch版本错误，需要为1.x.x'
+# assert torch.__version__.split('.')[0] == '1', 'PyTorch版本错误，需要为1.x.x'
 
 print('CUDA available: {}'.format(torch.cuda.is_available()))
 
@@ -29,16 +29,17 @@ def main(args=None):
     parser = argparse.ArgumentParser(description='Simple training script for training a RetinaNet network.')
 
     parser.add_argument('--dataset', default='SARDet', help='Dataset type, must be one of csv or coco or SARDet.')
-    parser.add_argument('--coco_path', default='../Datasets/SARDet-100K', help='Path to COCO directory')
+    # parser.add_argument('--coco_path', default='../Datasets/SARDet-100K', help='Path to COCO directory')
+    parser.add_argument('--coco_path', default='/root/autodl-tmp/yolo', help='Path to COCO directory')
     parser.add_argument('--csv_train', help='Path to file containing training annotations (see readme)')
     parser.add_argument('--csv_classes', help='Path to file containing class list (see readme)')
     parser.add_argument('--csv_val', help='Path to file containing validation annotations (optional, see readme)')
 
-    parser.add_argument('--depth', help='Resnet depth, must be one of 18, 34, 50, 101, 152', type=int, default=50)
+    parser.add_argument('--depth', help='Resnet depth, must be one of 18, 34, 50, 101, 152', type=int, default=101)
     parser.add_argument('--epochs', help='Number of epochs', type=int, default=100)
     # parser.add_argument('--train_dir', help='训练结果文件夹存放目录', type=str, default='./runs/train/')
-    parser.add_argument('--batch_size', help='批处理大小', type=int, default=2)
-    parser.add_argument('--work_num', help='进程数', type=int, default=3)
+    parser.add_argument('--batch_size', help='批处理大小', type=int, default=16)
+    parser.add_argument('--work_num', help='进程数', type=int, default=8)
     parser.add_argument('--lr', help='学习率', type=float, default=1e-5)
 
     parser = parser.parse_args(args)

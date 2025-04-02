@@ -4,8 +4,8 @@ import platform
 import pathlib
 
 def main():
-    models = ['R50_154.pt','R101_138.pt']    # 要评估的模型
-    depth = ['50', '101']   # ResNet网络深度（与models一一对应）
+    models = ['R101_138.pt']    # 要评估的模型'R50_154.pt',
+    depth = ['101']   # ResNet网络深度（与models一一对应）'50',
 
     # 选择dataset文件
     plt = platform.system() # 判断操作系统类型
